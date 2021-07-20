@@ -16,6 +16,8 @@ git init
 git add -A
 git commit -m 'deploy'
 
+export GIT_SSH_COMMAND="ssh -i /tmp/git_deploy_key"
+
 # if you are deploying to https://<USERNAME>.github.io/<REPO>
 git push -f git@github.com:Marm0t/index_calc.git master:gh-pages
 
