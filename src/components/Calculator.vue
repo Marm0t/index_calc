@@ -1,17 +1,31 @@
 <template>
-<div class="hello">
-  TESTING GITHUB PAGES WITH VUE.JS
-</div>
+    <div class='card'>
+        <h3>{{ title }} </h3>
+        
+    </div>
 </template>
 
 <script>
 export default {
-  name: 'HelloWorld',
-  props: {
-    msg: String
-  }
+      name: 'Calculator',
+      data() {
+        return {
+            title: '< тут надо вводить данные >'
+        }
+      }
+
+    
 }
 </script>
+
+
+
+
+
+
+
+
+
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
