@@ -1,9 +1,9 @@
 <template>
     <div class="container" id="app">
 
-<h1>Калькулятор индекса</h1>
-<Calculator></Calculator>
-<IndexList />
+    <h1>Калькулятор индекса Мосбиржи</h1>
+    <Calculator v-on:inputValueChanged="valueToPassToIndexList = $event"> </Calculator>
+    <IndexList :sumToBuy = "valueToPassToIndexList"/>
 
     </div>
 
@@ -18,8 +18,15 @@ export default {
   name: 'App',
   components: {
     "Calculator": Calculator,
-    "IndexList": IndexList
+    "IndexList" : IndexList
+  },
+  data: function (){
+    return {
+      valueToPassToIndexList: 0
+    }
   }
+
+
 }
 </script>
 
@@ -29,7 +36,7 @@ export default {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
-  color: #2c3e50;
+  color: #2c3e50; 
   margin-top: 60px;
 }
 </style>

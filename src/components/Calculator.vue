@@ -1,6 +1,15 @@
 <template>
     <div class='card'>
-        <h3>{{ title }} </h3>
+        <!-- <h3>{{ title }} </h3> -->
+        <div class="form-control">
+          <h3>Вы хотите следовать индексу Мосбиржи, но не хотите покупать ETF?</h3>
+          <p>Этот калькулятор рассчитает сколько и каких акций нужно купить, чтобы максимально точно следовать индексу.<br>
+          Сколько Вы хотите вложить?</p>
+           <input type="number" 
+               v-bind:placeholder=" inputValuePlaceholder "
+               v-model = "inputValue">
+          <p v-if="inputValue && inputValue<100000">Внимание: чем выше сумма, тем точнее будет следование Индексу. Хорошо бы иметь миллион и более, но не у всех он есть :( </p>
+        </div>
         
     </div>
 </template>
@@ -10,9 +19,25 @@ export default {
       name: 'Calculator',
       data() {
         return {
-            title: '< тут надо вводить данные >'
+            title: 'Калькулятор индекса Мосбиржи',
+            inputValuePlaceholder: 'введите сумму в рублях',
+            inputValue: ''
         }
-      }
+      },// data()
+
+      methods: {
+
+
+      },// methods
+
+      watch:{
+
+        inputValue(value){
+            this.$emit('inputValueChanged', value)
+        }
+
+      }// watch
+
 
     
 }

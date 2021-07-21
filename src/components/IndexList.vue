@@ -2,21 +2,31 @@
 <div class='card'>
     <!-- <h3>{{title}}</h3> -->
     <div class="form-control">
+    <p v-if="sumToBuy"> 
+      Чтобы следовать индексу Мосбиржи имея лишь {{sumToBuy}} рублей, Вам необходимо преобрести акций в соответствии с таблицей 
+    </p>
+
     <ul class="responsive-table" v-if="indexComponents.length !== 0">
       <li class="table-header list-item">
-            <div class="col col-1" v-on:click="sortConponentsByTicker">Тикер</div>
+            <div class="col col-1 sort" v-on:click="indexComponents.sortConponentsByTicker">Тикер</div>
             <div class="col col-2">Название</div>
-            <div class="col col-3" v-on:click="sortConponentsByWeight">Вес</div>
-            <div class="col col-4">Цена</div>
+            <div class="col col-3 sort" v-on:click="indexComponents.sortConponentsByWeight">Вес</div>
+            <div class="col col-4">Цена за штуку</div>
+            <div class="col col-5 sort" v-on:click="indexComponents.sortConponentsByNeedBuy">Купить штук</div>
+            <div class="col col-6" >Сумма</div>
+
       </li>
 
       <li class="table-row list-item" 
           v-for="(item,idx) in indexComponents" :key="idx"
           v-on:click="itemClicked(idx)" >
-        <div class="col col-1" data-label="Ticker">{{item.ticker}}</div>
-        <div class="col col-2" data-label="Name">{{item.company_name}}</div>
-        <div class="col col-3" data-label="Weight">{{item.weight}}</div>
-        <div class="col col-4">{{item.last_price}} </div>
+        <div class="col col-1" data-label="ticker">{{item.ticker}}</div>
+        <div class="col col-2" data-label="company_name">{{item.company_name}}</div>
+        <div class="col col-3" data-label="weight">{{item.weight}}</div>
+        <div class="col col-4" data-label="last_price">{{item.last_price}}</div>
+        <div class="col col-5" data-label="need_buy">{{item.need_buy}}</div>
+        <div class="col col-6" > {{ (item.need_buy)? Math.round(item.need_buy * item.last_price) : "" }} </div>
+
       </li>
     </ul>
     <div v-else>
@@ -28,7 +38,9 @@
 
 <script>
 
-var url_imoex = "https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities.json?marketdata.columns=LAST&securities.columns=SECID,SHORTNAME,SECNAME&iss.meta=off&iss.only=marketdata,securities&securities=";
+
+var url_imoex = "https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities.json?marketdata.columns=LAST&securities.columns=SECID,SHORTNAME,SECNAME,LOTSIZE&iss.meta=off&iss.only=marketdata,securities&securities=";
+// IMOEX info is taken 21/07/2021 from https://www.moex.com/ru/index/IMOEX/constituents/
 var imoex = [
 {ticker:"AFKS" , weight:"0.5"},
 {ticker:"AFLT" , weight:"0.35"},
@@ -76,6 +88,7 @@ var imoex = [
 {ticker:"YNDX" , weight:"7.56"}
 ]
 
+// sorting methods for imoex array
 function compareByTicker( a, b ) {
   if ( a.ticker < b.ticker ){ return -1; }
   if ( a.ticker > b.ticker ){ return 1;  }
@@ -86,11 +99,36 @@ function compareByWeight( a, b ) {
   if ( parseFloat(a.weight) > parseFloat(b.weight) ){ return -1;  }
   return 0;
 }
+function compareByNeedBuy( a, b ) {
+
+  if ( parseFloat(a.need_buy) < parseFloat(b.need_buy) ){ return 1; }
+  if ( parseFloat(a.need_buy) > parseFloat(b.need_buy) ){ return -1;  }
+  return 0;
+}
+
+imoex.sortConponentsByTicker = function(){
+    this.asc=!this.asc;
+    if (this.asc) return this.sort(compareByTicker)
+    else return this.reverse(compareByTicker);
+}
+imoex.sortConponentsByWeight = function(){
+    this.asc=!this.asc;
+    if (this.asc) return this.sort(compareByWeight)
+    else return this.reverse(compareByWeight);
+}
+imoex.sortConponentsByNeedBuy = function(){
+    this.asc=!this.asc;
+    if (this.asc) return this.sort(compareByNeedBuy)
+    else return this.reverse(compareByNeedBuy);
+}
+// --- end of sorting methods ---
+
 
 import axios from 'axios'
 
 export default {
       name: 'IndexList',
+      props: ['sumToBuy'],
       data() {
         return {
           title: '',
@@ -103,10 +141,7 @@ methods: {
         console.log("Someone clicked on ", this.indexComponents[idx].ticker);
       },
 
-      sortConponentsByTicker(){this.indexComponents.sort(compareByTicker)},
-      sortConponentsByWeight(){this.indexComponents.sort(compareByWeight)},
-
-      updateRates(){
+      updateDataFromMicex(){
         //console.log("Updating rates for " , this.indexComponents[idx]);
         var allComponentsStr = "";
         this.indexComponents.forEach(element => {
@@ -127,6 +162,7 @@ methods: {
                             //console.log("Found it! ", index, element);
                             element["last_price"] = response.data.marketdata.data[index][0];
                             element["company_name"] =  response.data.securities.data[index][1];
+                            element["lot_size"] =  response.data.securities.data[index][3];
                             return true;
                           }
                         })// end of FIND
@@ -135,6 +171,16 @@ methods: {
 
                   }) // end of response handling
           .catch(error => console.log(error))
+      }, // updateDataFromMicex()
+
+
+      updateDataWithNeedBuy(value){
+        console.log("Updating need_buy based on total value " , value);
+
+        this.indexComponents.forEach(element => {
+          element.need_buy = Math.floor( Math.round(    value * (parseFloat(element.weight)/100)  / element.last_price     ) / element.lot_size) *  element.lot_size;
+        });
+
       }
 
 
@@ -148,11 +194,15 @@ computed: {
 watch: {
   indexComponents(value){
     console.log("indexComponents changed to: ", value)
+  },
+
+  sumToBuy(value){
+    this.updateDataWithNeedBuy(value);
   }
 }, // watch
 
   mounted() {
-    this.updateRates()
+    this.updateDataFromMicex()
     
   }
 
@@ -179,17 +229,27 @@ watch: {
     box-shadow: 0px 0px 9px 0px rgba(0, 0, 0, 0.1);
   }
 
-    .col-1 {
+  .sort::after {
+    content: "↕️";
+  }
+
+  .col-1 {
     flex-basis: 10%;
   }
   .col-2 {
-    flex-basis: 40%;
+    flex-basis: 20%;
   }
   .col-3 {
-    flex-basis: 25%;
+    flex-basis: 10%;
   }
   .col-4 {
-    flex-basis: 25%;
+    flex-basis: 10%;
+  }
+  .col-5 {
+    flex-basis: 10%;
+  }
+  .col-6 {
+    flex-basis: 20%;
   }
 
 
