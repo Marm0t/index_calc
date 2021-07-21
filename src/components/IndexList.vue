@@ -4,8 +4,8 @@
     <div class="form-control">
     <ul class="responsive-table" v-if="indexComponents.length !== 0">
       <li class="table-header list-item">
-            <!-- <div class="col col-1">Индекс</div> -->
-            <div class="col col-2" v-on:click="sortConponentsByTicker">Тикер</div>
+            <div class="col col-1" v-on:click="sortConponentsByTicker">Тикер</div>
+            <div class="col col-2">Название</div>
             <div class="col col-3" v-on:click="sortConponentsByWeight">Вес</div>
             <div class="col col-4">Цена</div>
       </li>
@@ -13,8 +13,8 @@
       <li class="table-row list-item" 
           v-for="(item,idx) in indexComponents" :key="idx"
           v-on:click="itemClicked(idx)" >
-        <!-- <div class="col col-1" data-label="Index">[{{idx+1}}]</div> -->
-        <div class="col col-2" data-label="Ticker">{{item.ticker}}</div>
+        <div class="col col-1" data-label="Ticker">{{item.ticker}}</div>
+        <div class="col col-2" data-label="Name">{{item.company_name}}</div>
         <div class="col col-3" data-label="Weight">{{item.weight}}</div>
         <div class="col col-4">{{item.last_price}} </div>
       </li>
@@ -28,7 +28,7 @@
 
 <script>
 
-
+var url_imoex = "https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities.json?marketdata.columns=LAST&securities.columns=SECID,SHORTNAME,SECNAME&iss.meta=off&iss.only=marketdata,securities&securities=";
 var imoex = [
 {ticker:"AFKS" , weight:"0.5"},
 {ticker:"AFLT" , weight:"0.35"},
@@ -106,31 +106,53 @@ methods: {
       sortConponentsByTicker(){this.indexComponents.sort(compareByTicker)},
       sortConponentsByWeight(){this.indexComponents.sort(compareByWeight)},
 
-      updateRate(item, idx){
+      updateRates(){
         //console.log("Updating rates for " , this.indexComponents[idx]);
+        var allComponentsStr = "";
+        this.indexComponents.forEach(element => {
+          allComponentsStr = allComponentsStr + "," + element.ticker;
+        });
+        console.log("Updating components by calling " + url_imoex+allComponentsStr);
         axios
-          .get('https://iss.moex.com/iss/engines/stock/markets/shares/boards/TQBR/securities.json?marketdata.columns=LAST&iss.meta=off&iss.only=marketdata&securities='+this.indexComponents[idx].ticker)
+          .get(url_imoex+allComponentsStr)
           .then(response => 
-                  (this.indexComponents[idx]["last_price"] = response.data.marketdata.data[0][0])
-                  //console.log(response.data.marketdata.data[0][0]) 
-                )
-          .catch(error => console.log(error));
+                  {
+                      //console.log("Response from MICEX: ", response),
+                      //console.log('Data on which we do FIND: ', response.data.securities.data[0]),
+                      // Update each element in indexComponents
+                      this.indexComponents.forEach(element => {
+                        response.data.securities.data.find(function(item, index){
+                          if (item[0] ==  element.ticker){
+                            // Here we found an index in response arrays and ready to update _element_ which is in this.indexComponents
+                            //console.log("Found it! ", index, element);
+                            element["last_price"] = response.data.marketdata.data[index][0];
+                            element["company_name"] =  response.data.securities.data[index][1];
+                            return true;
+                          }
+                        })// end of FIND
+
+                      })// end of for_each on indexComponents
+
+                  }) // end of response handling
+          .catch(error => console.log(error))
       }
-},
+
+
+},// methods
 
 
 
 computed: {
-},
+}, // computed
   
 watch: {
   indexComponents(value){
     console.log("indexComponents changed to: ", value)
   }
-},
+}, // watch
 
   mounted() {
-    this.indexComponents.forEach(this.updateRate)
+    this.updateRates()
     
   }
 
@@ -158,10 +180,10 @@ watch: {
   }
 
     .col-1 {
-    flex-basis: 25%;
+    flex-basis: 10%;
   }
   .col-2 {
-    flex-basis: 25%;
+    flex-basis: 40%;
   }
   .col-3 {
     flex-basis: 25%;
